@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>刀气无双</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+body { background: #0a0a1a; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+canvas { display: block; cursor: none; }
+
+/* 升级面板 - 默认隐藏 */
+#levelUpPanel {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+#levelUpPanel.show { display: flex; }
+
+.levelup-box {
+    background: linear-gradient(145deg, #1a1a3a, #0d0d2b);
+    border: 2px solid #4488ff;
+    border-radius: 20px;
+    padding: 25px 35px 30px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(68,136,255,0.3);
+    max-width: 720px;
+    width: 90%;
+    position: relative;
+}
+.levelup-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    margin-bottom: 8px;
+}
+.levelup-header h2 {
+    color: #ffd700;
+    font-size: 32px;
+    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+    margin: 0;
+}
+.close-btn {
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,68,68,0.2);
+    border: 2px solid #ff4444;
+    color: #ff6666;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+}
+.close-btn:hover {
+    background: rgba(255,68,68,0.4);
+    transform: scale(1.15);
+}
+.levelup-box .sub {
+    color: #aac;
+    font-size: 16px;
+    margin-bottom: 25px;
+}
+.options {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.opt-btn {
+    background: linear-gradient(145deg, #2a2a5a, #1a1a3a);
+    border: 2px solid #3366aa;
+    border-radius: 16px;
+    padding: 20px 18px;
+    width: 180px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #eee;
+    text-align: center;
+}
+.opt-btn:hover {
+    border-color: #66aaff;
+    background: linear-gradient(145deg, #3a3a7a, #2a2a5a);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(68,136,255,0.3);
+}
+.opt-btn .icon { font-size: 36px; display: block; margin-bottom: 8px; }
+.opt-btn .name { font-size: 18px; font-weight: bold; color: #fff; display: block; margin-bottom: 4px; }
+.opt-btn .desc { font-size: 13px; color: #99b; display: block; margin-bottom: 6px; }
+.opt-btn .effect { font-size: 14px; color: #5f5; display: block; }
+
+/* 抽奖按钮 */
+.lottery-row {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+.lottery-btn {
+    background: linear-gradient(145deg, #2a2a5a, #1a1a3a);
+    border: 2px solid #8866cc;
+    border-radius: 14px;
+    padding: 14px 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #ddd;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.lottery-btn:hover {
+    border-color: #aa88ff;
+    background: linear-gradient(145deg, #3a3a7a, #2a2a5a);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(136,102,204,0.3);
+}
+.lottery-btn .lt-icon { font-size: 28px; }
+.lottery-btn .lt-label { font-size: 17px; font-weight: bold; }
+.lottery-btn .lt-info { font-size: 12px; color: #99a; }
+
+/* 抽奖结果提示 */
+#lotteryResult {
+    display: none;
+    margin-top: 14px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    animation: resultPop 0.4s ease;
+}
+#lotteryResult.show { display: block; }
+#lotteryResult.green {
+    background: rgba(0,200,80,0.2);
+    border: 1px solid #00cc50;
+    color: #66ff88;
+}
+#lotteryResult.yellow {
+    background: rgba(255,200,0,0.2);
+    border: 1px solid #ffcc00;
+    color: #ffdd44;
+}
+#lotteryResult.none {
+    background: rgba(100,100,100,0.2);
+    border: 1px solid #666;
+    color: #aaa;
+}
+@keyframes resultPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 游戏结束面板 */
+#gameOverPanel {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+}
+#gameOverPanel.show { display: flex; }
+.gameover-box {
+    background: linear-gradient(145deg, #2a1a1a, #1a0a0a);
+    border: 2px solid #ff4444;
+    border-radius: 20px;
+    padding: 40px 50px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(255,68,68,0.3);
+}
+.gameover-box h2 { color: #ff6666; font-size: 36px; margin-bottom: 10px; }
+.gameover-box .stat { color: #ccc; font-size: 18px; margin-bottom: 8px; }
+.gameover-box .btn {
+    margin-top: 20px;
+    padding: 12px 40px;
+    font-size: 20px;
+    background: linear-gradient(145deg, #ff4444, #cc2222);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.gameover-box .btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(255,68,68,0.5);
+}
+
+/* 大招按钮 */
+.ult-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 30px;
+    z-index: 50;
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #1a1a3a, #0d0d2b);
+    border: 3px solid #444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+    user-select: none;
+}
+.ult-btn:hover { transform: scale(1.08); }
+.ult-btn:active { transform: scale(0.95); }
+.ult-btn.ready {
+    border-color: #ffd700;
+    box-shadow: 0 0 30px rgba(255,215,0,0.5);
+    animation: ultPulse 1s ease-in-out infinite;
+}
+.ult-btn .ult-ring { text-align: center; }
+.ult-btn .ult-icon { font-size: 24px; display: block; color: #666; margin-bottom: 1px; }
+.ult-btn .ult-label { font-size: 11px; display: block; color: #888; }
+.ult-btn .ult-count { font-size: 10px; display: block; color: #555; margin-top: 1px; }
+.ult-btn.ready .ult-icon { color: #ffd700; }
+.ult-btn.ready .ult-label { color: #ffd700; }
+.ult-btn.ready .ult-count { color: #ffd700; font-weight: bold; }
+
+@keyframes ultPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(255,215,0,0.3); }
+    50% { box-shadow: 0 0 40px rgba(255,215,0,0.8); }
+}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- 升级面板 -->
+<div id="levelUpPanel">
+    <div class="levelup-box">
+        <div class="levelup-header">
+            <h2>⬆ 升级！</h2>
+            <span class="close-btn" onclick="skipLevelUp()" title="不选，跳过升级">✖</span>
+        </div>
+        <div class="sub">击杀 <span id="killCountDisplay">20</span> 个敌人，选择一项强化：</div>
+        <div class="options">
+            <div class="opt-btn" onclick="chooseUpgrade(0)">
+                <span class="icon">🗡️</span>
+                <span class="name">尺寸+1</span>
+                <span class="desc">刀气的尺寸增大</span>
+                <span class="effect" id="upgradeEffect0">+1 尺寸</span>
+            </div>
+            <div class="opt-btn" onclick="chooseUpgrade(1)">
+                <span class="icon">⚔️</span>
+                <span class="name">伤害提升</span>
+                <span class="desc">每次命中造成更多伤害</span>
+                <span class="effect" id="upgradeEffect1">+1 伤害</span>
+            </div>
+            <div class="opt-btn" onclick="chooseUpgrade(2)">
+                <span class="icon">🌀</span>
+                <span class="name">刀气数量+1</span>
+                <span class="desc">每次发射的刀气增加一道</span>
+                <span class="effect" id="upgradeEffect2">+1 道</span>
+            </div>
+            <div class="opt-btn" onclick="chooseUpgrade(3)">
+                <span class="icon">⚡</span>
+                <span class="name">攻速提升</span>
+                <span class="desc">刀气发射间隔缩短</span>
+                <span class="effect" id="upgradeEffect3">-60ms</span>
+            </div>
+        </div>
+        <div class="lottery-row">
+            <div class="lottery-btn" onclick="doLottery()">
+                <span class="lt-icon">🎲</span>
+                <span class="lt-label">碰碰运气</span>
+                <span class="lt-info">绿色 30% · 黄色 20%</span>
+            </div>
+        </div>
+        <div id="lotteryResult"></div>
+    </div>
+</div>
+
+<!-- 游戏结束面板 -->
+<div id="gameOverPanel">
+    <div class="gameover-box">
+        <h2>💀 败了</h2>
+        <div class="stat">等级：<span id="finalLevel">0</span></div>
+        <div class="stat">击杀：<span id="finalKills">0</span></div>
+        <div class="stat">刀气尺寸：<span id="finalSize">0</span></div>
+        <div class="stat">刀气伤害：<span id="finalDamage">0</span></div>
+        <div class="stat">刀气数量：<span id="finalCount">0</span></div>
+        <div class="stat">发射冷却：<span id="finalCooldown">0</span>ms</div>
+        <button class="btn" onclick="restartGame()">再来一局</button>
+    </div>
+</div>
+
+<!-- 大招按钮 -->
+<div id="ultBtn" class="ult-btn" onclick="fireUlt()">
+    <div class="ult-ring">
+        <span class="ult-icon">⚡</span>
+        <span class="ult-label">大招</span>
+        <span class="ult-count" id="ultCount">0/50</span>
+    </div>
+</div>
+
+<script>
+// ============================================================
+//  ██████  游戏配置
+// ============================================================
+const MAX_LEVEL = 30;      // 最高30级，防止后期太强
+const MAX_ENEMIES = 45;    // 最大同时存在的敌人
+const MAX_SLASHES = 80;    // 最大同时存在的刀气
+const MAX_PARTICLES = 200; // 最大粒子数
+
+const CFG = {
+    playerSize: 26,
+    playerSmooth: 0.08,   // 玩家跟随鼠标的平滑度
+
+    slashCooldown: 500,    // 自动发射冷却(ms)（难度提升）
+    slashClickCooldown: 160,
+    slashSpeed: 7,
+    slashSize: 28,         // 初始刀气大小
+    slashDamage: 1,
+    slashCount: 1,
+    slashLife: 800,        // 刀气存活时间(ms)
+    slashRange: 10000,     // 刀气最大飞行距离（射程）
+    slashSpread: 0.3,      // 多刀时的分散弧度
+
+    enemyBaseSpeed: 1.6,   // 敌人更快（原1.2）
+    enemySpawnBase: 600,   // 生成更快（原900ms）
+    enemySpawnMin: 180,    // 最快生成间隔（原250ms）
+    enemyBaseHp: 1,
+
+    killsToLevelUp: 20,   // 初始值，后续随等级增长
+
+    // 升级成长系数
+    upgradeSizeMul: 1.4,
+    upgradeSizeAdd: 1,
+    upgradeDamageAdd: 1,
+    upgradeCountAdd: 1,
+    upgradeCooldownReduce: 60,  // 每次升级减少60ms冷却
+    minCooldown: 100,            // 最低冷却100ms
+};
+
+// ============================================================
+//  ██████  游戏状态
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// 鼠标位置
+let mouseX = W / 2;
+let mouseY = H / 2;
+canvas.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+});
+canvas.addEventListener('mouseleave', () => {
+    // 鼠标离开时停在原地
+});
+canvas.addEventListener('click', () => {
+    if (state === 'playing') {
+        tryFireSlash(true);
+    }
+});
+
+// 键盘监听：A键放大招
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'a' || e.key === 'A') {
+        fireUlt();
+    }
+});
+
+// 游戏状态
+let state = 'playing'; // 'playing' | 'levelup' | 'gameover'
+
+let player = {};
+let slashes = [];
+let enemies = [];
+let particles = [];
+let damages = [];        // 伤害数字
+let lastAutoFire = 0;
+let lastClickFire = 0;
+let lastSpawn = 0;
+let kills = 0;
+let level = 0;
+let levelKills = 0;      // 当前等级内击杀数
+let spawnInterval = CFG.enemySpawnBase;
+let gameTime = 0;
+
+// 大招充能
+let ultCharge = 0;
+const ultMax = 50;
+
+// 当前属性（受升级影响）
+let curSize = CFG.slashSize;
+let curDamage = CFG.slashDamage;
+let curCount = CFG.slashCount;
+let curCooldown = CFG.slashCooldown;
+
+// 关卡系统
+let currentStage = 1;        // 当前关卡 1=江湖 2=外星 3=宇宙
+let stageKills = 0;         // 当前关卡击杀数
+const STAGE_KILLS_NEED = 100; // 每关需要击杀数
+let stageTransText = '';     // 关卡过渡提示文字
+let stageTransTimer = 0;     // 过渡计时器
+
+// ============================================================
+//  ██████  工具函数
+// ============================================================
+function dist(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function rand(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function randInt(min, max) {
+    return Math.floor(rand(min, max + 1));
+}
+
+function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
+// 获取当前等级需要的升级击杀数（随等级缓慢增长）
+function getKillsToLevelUp() {
+    return 20 + level * 2;
+}
+
+// 获取最近的敌人
+function getNearestEnemy(x, y, maxDist) {
+    let best = null;
+    let bestD = maxDist || Infinity;
+    for (const e of enemies) {
+        const d = dist({x, y}, e);
+        if (d < bestD) {
+            bestD = d;
+            best = e;
+        }
+    }
+    return best;
+}
+
+// 生成敌人
+function spawnEnemy() {
+    if (enemies.length >= MAX_ENEMIES) return; // 防卡顿
+    const side = randInt(0, 3); // 0=左 1=右 2=上 3=下
+    let x, y;
+    const margin = 40;
+    if (side === 0) { x = -margin; y = rand(0, H); }
+    else if (side === 1) { x = W + margin; y = rand(0, H); }
+    else if (side === 2) { x = rand(0, W); y = -margin; }
+    else { x = rand(0, W); y = H + margin; }
+
+    const speedMul = 1 + level * 0.08;
+    const hpAdd = Math.floor(level / 2);
+
+    // 根据关卡生成不同类型的敌人
+    let eType;
+    if (currentStage === 1) {
+        const wuxiaTypes = [
+            { stage: 1, body: '#8B4513', dark: '#5C2E00', hat: '#4A3520', weapon: '#aaa' },
+            { stage: 1, body: '#6B3A3A', dark: '#4A2020', hat: '#3A2525', weapon: '#ccc' },
+            { stage: 1, body: '#3D3D3D', dark: '#222222', hat: '#1A1A2A', weapon: '#88aacc' },
+            { stage: 1, body: '#6B5B4B', dark: '#4A3E32', hat: '#5A4A3A', weapon: '#bbb' },
+            { stage: 1, body: '#4A3A2A', dark: '#2A1A0A', hat: '#3A2A1A', weapon: '#998877' },
+        ];
+        eType = wuxiaTypes[Math.floor(Math.random() * wuxiaTypes.length)];
+    } else if (currentStage === 2) {
+        const alienTypes = [
+            { stage: 2, body: '#3A8B3A', dark: '#1A4A1A', eye: '#44ff44', skin: '#5AB85A' },
+            { stage: 2, body: '#7B3A8B', dark: '#3A1A4A', eye: '#cc44ff', skin: '#9B5AB8' },
+            { stage: 2, body: '#3A6B8B', dark: '#1A3A4A', eye: '#44ccff', skin: '#5A9BB8' },
+            { stage: 2, body: '#8B6B3A', dark: '#4A3A1A', eye: '#ffaa44', skin: '#B89B5A' },
+        ];
+        eType = alienTypes[Math.floor(Math.random() * alienTypes.length)];
+    } else {
+        const spaceTypes = [
+            { stage: 3, body: '#4488cc', dark: '#224466', glow: '#88ccff', core: '#ffffff' },
+            { stage: 3, body: '#cc4488', dark: '#662244', glow: '#ff88cc', core: '#ffddee' },
+            { stage: 3, body: '#44cc88', dark: '#226644', glow: '#88ffcc', core: '#ddffee' },
+            { stage: 3, body: '#8866cc', dark: '#442266', glow: '#cc88ff', core: '#eeddff' },
+        ];
+        eType = spaceTypes[Math.floor(Math.random() * spaceTypes.length)];
+    }
+
+    enemies.push({
+        x, y,
+        hp: CFG.enemyBaseHp + hpAdd,
+        maxHp: CFG.enemyBaseHp + hpAdd,
+        speed: CFG.enemyBaseSpeed * speedMul,
+        radius: 16 + level * 0.5,
+        hitFlash: 0,
+        angle: Math.random() * Math.PI * 2,
+        eType: eType,
+    });
+}
+
+// 发射刀气
+function fireSlash(targetX, targetY) {
+    if (slashes.length > MAX_SLASHES) return; // 防卡顿
+    const count = curCount;
+    for (let i = 0; i < count; i++) {
+        const angleOffset = count === 1 ? 0 : (i / (count - 1) - 0.5) * CFG.slashSpread;
+        const angle = Math.atan2(targetY - player.y, targetX - player.x) + angleOffset;
+
+        const speed = CFG.slashSpeed + level * 0.2;
+        const size = curSize + level * 1.5;
+
+        slashes.push({
+            x: player.x,
+            y: player.y,
+            startX: player.x,
+            startY: player.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: size,
+            damage: curDamage,
+            born: performance.now(),
+            life: CFG.slashLife + level * 20,
+            rot: angle,
+            trail: [],
+        });
+    }
+}
+
+// 尝试发射刀气
+function tryFireSlash(isClick) {
+    const now = performance.now();
+    if (isClick) {
+        if (now - lastClickFire < CFG.slashClickCooldown) return;
+        lastClickFire = now;
+
+        // 点击发射：找最近的敌人，没有则朝鼠标方向
+        const target = getNearestEnemy(player.x, player.y, 600);
+        if (target) {
+            fireSlash(target.x, target.y);
+        } else {
+            fireSlash(mouseX, mouseY);
+        }
+    } else {
+        // 自动发射
+        if (now - lastAutoFire < curCooldown) return;
+        lastAutoFire = now;
+
+        const target = getNearestEnemy(player.x, player.y, 500);
+        if (target) {
+            fireSlash(target.x, target.y);
+        } else {
+            // 没敌人时向鼠标方向发射
+            fireSlash(mouseX, mouseY);
+        }
+    }
+}
+
+// 添加粒子特效
+function addParticles(x, y, color, count, speed) {
+    if (particles.length > MAX_PARTICLES) return; // 防卡顿
+    for (let i = 0; i < count; i++) {
+        const angle = rand(0, Math.PI * 2);
+        const spd = rand(1, speed || 4);
+        particles.push({
+            x: x + rand(-5, 5),
+            y: y + rand(-5, 5),
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            life: rand(200, 500),
+            maxLife: 500,
+            radius: rand(2, 5),
+            color: color,
+        });
+    }
+}
+
+// 添加伤害数字
+function addDamageText(x, y, dmg) {
+    damages.push({
+        x: x + rand(-15, 15),
+        y: y - 10,
+        vy: -2 - rand(0, 1),
+        text: dmg.toString(),
+        life: 600,
+        maxLife: 600,
+        size: 24 + rand(0, 8),
+    });
+}
+
+// ============================================================
+//  ██████  升级系统
+// ============================================================
+function checkLevelUp() {
+    if (levelKills >= getKillsToLevelUp() && level < MAX_LEVEL) {
+        state = 'levelup';
+        // 重置抽奖结果
+        const lt = document.getElementById('lotteryResult');
+        lt.className = '';
+        lt.style.display = 'none';
+        document.getElementById('levelUpPanel').classList.add('show');
+        updateUpgradeUI();
+    }
+}
+
+function updateUpgradeUI() {
+    document.getElementById('killCountDisplay').textContent = getKillsToLevelUp();
+    document.getElementById('upgradeEffect0').textContent = `+1 尺寸 (当前: ${Math.round(curSize)})`;
+    document.getElementById('upgradeEffect1').textContent = `+${CFG.upgradeDamageAdd} 伤害 (当前: ${curDamage})`;
+    document.getElementById('upgradeEffect2').textContent = `+${CFG.upgradeCountAdd} 道 (当前: ${curCount})`;
+    document.getElementById('upgradeEffect3').textContent = `-${CFG.upgradeCooldownReduce}ms (当前: ${curCooldown}ms)`;
+}
+
+function chooseUpgrade(idx) {
+    if (state !== 'levelup') return;
+
+    if (idx === 0) {
+        curSize += CFG.upgradeSizeAdd;
+    } else if (idx === 1) {
+        curDamage += CFG.upgradeDamageAdd;
+    } else if (idx === 2) {
+        curCount += CFG.upgradeCountAdd;
+    } else if (idx === 3) {
+        curCooldown = Math.max(CFG.minCooldown, curCooldown - CFG.upgradeCooldownReduce);
+    }
+
+    state = 'playing';
+    document.getElementById('levelUpPanel').classList.remove('show');
+    levelKills = 0;
+    level++;
+
+    // 提升难度
+    spawnInterval = Math.max(CFG.enemySpawnMin, CFG.enemySpawnBase - level * 40);
+}
+
+// 跳过升级（不消耗击杀数，保留进度）
+function skipLevelUp() {
+    if (state !== 'levelup') return;
+    state = 'playing';
+    document.getElementById('levelUpPanel').classList.remove('show');
+    const el = document.getElementById('lotteryResult');
+    el.className = '';
+    el.style.display = 'none';
+}
+
+// 抽奖
+function doLottery() {
+    if (state !== 'levelup') return;
+
+    const roll = Math.random();
+    let cls = 'none', msg = '';
+
+    if (roll < 0.2) {
+        // 黄色 20% — 伤害+3，大小+3，刀气+7
+        curDamage += 3;
+        curSize *= 1.5;
+        curCount += 7;
+        cls = 'yellow';
+        msg = '✨ 黄色品质！ 伤害+3 · 大小+3 · 刀气+7';
+    } else if (roll < 0.5) {
+        // 绿色 30% — 刀气+6，大小+2，伤害+2
+        curCount += 6;
+        curSize *= 1.35;
+        curDamage += 2;
+        cls = 'green';
+        msg = '🍀 绿色品质！ 刀气+6 · 大小+2 · 伤害+2';
+    } else {
+        // 70% 没中
+        cls = 'none';
+        msg = '😅 没中，下次加油！';
+    }
+
+    // 显示结果
+    const el = document.getElementById('lotteryResult');
+    el.className = `show ${cls}`;
+    el.textContent = msg;
+
+    // 消耗击杀数升级
+    state = 'playing';
+    levelKills = 0;
+    level++;
+    spawnInterval = Math.max(CFG.enemySpawnMin, CFG.enemySpawnBase - level * 40);
+
+    // 延迟关闭面板
+    setTimeout(() => {
+        document.getElementById('levelUpPanel').classList.remove('show');
+        el.className = '';
+        el.style.display = 'none';
+    }, 1200);
+}
+
+// ============================================================
+//  ██████  游戏结束
+// ============================================================
+function gameOver() {
+    state = 'gameover';
+    document.getElementById('finalLevel').textContent = level;
+    document.getElementById('finalKills').textContent = kills;
+    document.getElementById('finalSize').textContent = Math.round(curSize);
+    document.getElementById('finalDamage').textContent = curDamage;
+    document.getElementById('finalCount').textContent = curCount;
+    document.getElementById('finalCooldown').textContent = curCooldown;
+    document.getElementById('gameOverPanel').classList.add('show');
+}
+
+function restartGame() {
+    document.getElementById('gameOverPanel').classList.remove('show');
+    document.getElementById('levelUpPanel').classList.remove('show');
+
+    player = { x: W / 2, y: H / 2 };
+    slashes = [];
+    enemies = [];
+    particles = [];
+    damages = [];
+    kills = 0;
+    level = 0;
+    levelKills = 0;
+    spawnInterval = CFG.enemySpawnBase;
+    gameTime = 0;
+    lastAutoFire = 0;
+    lastClickFire = 0;
+    lastSpawn = 0;
+
+    curSize = CFG.slashSize;
+    curDamage = CFG.slashDamage;
+    curCount = CFG.slashCount;
+    curCooldown = CFG.slashCooldown;
+
+    ultCharge = 0;
+    updateUltButton();
+
+    currentStage = 1;
+    stageKills = 0;
+    stageTransText = '';
+    stageTransTimer = 0;
+
+    state = 'playing';
+}
+
+// ============================================================
+//  ██████  大招系统
+// ============================================================
+function updateUltButton() {
+    const btn = document.getElementById('ultBtn');
+    const count = document.getElementById('ultCount');
+    count.textContent = `${ultCharge}/${ultMax}`;
+    if (ultCharge >= ultMax) {
+        btn.classList.add('ready');
+        count.textContent = '释放!';
+    } else {
+        btn.classList.remove('ready');
+    }
+}
+
+function fireUlt() {
+    if (ultCharge < ultMax) return;
+    if (state !== 'playing') return;
+
+    ultCharge = 0;
+    updateUltButton();
+
+    // 聚气特效（大爆发）
+    addParticles(player.x, player.y, '#ffd700', 60, 12);
+    addParticles(player.x, player.y, '#ff8800', 30, 8);
+
+    // 向360度发射一圈金色刀气（范围超大）
+    const count = 24;
+    for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const speed = CFG.slashSpeed * 2.2 + level * 0.4;
+        const size = (curSize + level * 1.5) * 2.0;
+
+        slashes.push({
+            x: player.x,
+            y: player.y,
+            startX: player.x,
+            startY: player.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: size,
+            damage: Math.max(3, curDamage * 2),
+            born: performance.now(),
+            life: 1200,
+            rot: angle,
+            trail: [],
+            isUlt: true,
+            range: 900,   // 大招专用射程，比普通刀气远
+        });
+    }
+}
+
+// ============================================================
+//  ██████  更新逻辑
+// ============================================================
+function update() {
+    if (state === 'gameover') return;
+    if (state === 'levelup') return;
+
+    const dt = 16; // ~60fps
+    gameTime += dt;
+
+    // 更新玩家位置（平滑跟随鼠标）
+    if (!player.x) { player.x = W / 2; player.y = H / 2; }
+    player.x += (mouseX - player.x) * CFG.playerSmooth;
+    player.y += (mouseY - player.y) * CFG.playerSmooth;
+
+    // 边界限制
+    player.x = clamp(player.x, CFG.playerSize, W - CFG.playerSize);
+    player.y = clamp(player.y, CFG.playerSize, H - CFG.playerSize);
+
+    // 自动发射
+    tryFireSlash(false);
+
+    // 生成敌人
+    const now = performance.now();
+    if (now - lastSpawn > spawnInterval) {
+        lastSpawn = now;
+        spawnEnemy();
+        // 随游戏时间增加，偶尔一次生成多个
+        if (gameTime > 15000 && Math.random() < 0.25) {
+            spawnEnemy();
+        }
+        // 游戏时间越长，偶尔一波出三个
+        if (gameTime > 40000 && Math.random() < 0.15) {
+            spawnEnemy();
+        }
+    }
+
+    // 更新刀气
+    for (let i = slashes.length - 1; i >= 0; i--) {
+        const s = slashes[i];
+        const age = now - s.born;
+        if (age > s.life) {
+            slashes.splice(i, 1);
+            continue;
+        }
+
+        // 保存轨迹
+        s.trail.push({ x: s.x, y: s.y, age: age });
+        if (s.trail.length > 6) s.trail.shift();
+
+        s.x += s.vx;
+        s.y += s.vy;
+
+        // 飞出屏幕则移除
+        if (s.x < -100 || s.x > W + 100 || s.y < -100 || s.y > H + 100) {
+            slashes.splice(i, 1);
+            continue;
+        }
+
+        // 射程检查（超过最大飞行距离则消失，大招用独立射程）
+        const maxRange = s.range || CFG.slashRange;
+        const distFromStart = Math.hypot(s.x - s.startX, s.y - s.startY);
+        if (distFromStart > maxRange) {
+            slashes.splice(i, 1);
+            continue;
+        }
+
+        // 碰撞检测：与敌人
+        let hit = false;
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            if (dist(s, e) < s.size + e.radius) {
+                // 命中！
+                e.hp -= s.damage;
+                e.hitFlash = 120;
+                hit = true;
+
+                addParticles(e.x, e.y, '#88ddff', 8, 3);
+                addDamageText(e.x, e.y - e.radius, s.damage);
+
+                if (e.hp <= 0) {
+                    // 击杀
+                    addParticles(e.x, e.y, '#ff6644', 20, 6);
+                    enemies.splice(j, 1);
+                    kills++;
+                    levelKills++;
+                    // 大招充能
+                    if (ultCharge < ultMax) {
+                        ultCharge++;
+                        updateUltButton();
+                    }
+                    checkLevelUp();
+                    // 关卡进度
+                    stageKills++;
+                    if (stageKills >= STAGE_KILLS_NEED && currentStage < 3) {
+                        currentStage++;
+                        stageKills = 0;
+                        const names = ['', '第一关·江湖', '第二关·外星', '第三关·宇宙'];
+                        stageTransText = '⚡ ' + names[currentStage] + ' ⚡';
+                        stageTransTimer = 100;
+                    }
+                }
+                break;
+            }
+        }
+        if (hit) {
+            slashes.splice(i, 1);
+        }
+    }
+
+    // 更新敌人
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        const angle = Math.atan2(player.y - e.y, player.x - e.x);
+        e.x += Math.cos(angle) * e.speed;
+        e.y += Math.sin(angle) * e.speed;
+        e.angle += 0.02;
+
+        if (e.hitFlash > 0) e.hitFlash -= dt;
+
+        // 碰到玩家 → 游戏结束
+        if (dist(e, player) < e.radius + CFG.playerSize) {
+            addParticles(player.x, player.y, '#ff4444', 30, 8);
+            gameOver();
+            return;
+        }
+
+        // 离太远不处理（超出屏幕太远的不生成）
+    }
+
+    // 更新粒子
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        p.life -= dt;
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+
+    // 更新伤害数字
+    for (let i = damages.length - 1; i >= 0; i--) {
+        const d = damages[i];
+        d.y += d.vy;
+        d.vy *= 0.98;
+        d.life -= dt;
+        if (d.life <= 0) {
+            damages.splice(i, 1);
+        }
+    }
+}
+
+// ============================================================
+//  ██████  绘制
+// ============================================================
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // ---- 背景（按关卡选择） ----
+    drawStageBg(ctx, currentStage);
+
+    // ---- 粒子 ----
+    for (const p of particles) {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius * alpha, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    // ---- 刀气（绘制） ----
+    const now = performance.now();
+    for (const s of slashes) {
+        const age = now - s.born;
+        const alpha = Math.min(1, age / 100) * (1 - age / s.life * 0.3);
+
+        const isUlt = s.isUlt;
+        const trailColor = isUlt ? '#ff8800' : '#88ddff';
+        const mainColor = isUlt ? '#ffcc00' : '#00ddff';
+
+        // 轨迹
+        for (let t = 0; t < s.trail.length; t++) {
+            const tr = s.trail[t];
+            const ta = (t / s.trail.length) * 0.3 * alpha;
+            drawSlashShape(ctx, tr.x, tr.y, s.size * (0.4 + 0.6 * t / s.trail.length), s.rot, ta, trailColor);
+        }
+
+        // 主体
+        drawSlashShape(ctx, s.x, s.y, s.size, s.rot, alpha, mainColor);
+    }
+
+    // ---- 敌人 ----
+    for (const e of enemies) {
+        drawEnemy(ctx, e);
+    }
+
+    // ---- 玩家 ----
+    drawPlayer(ctx, player);
+
+    // ---- 伤害数字 ----
+    for (const d of damages) {
+        const alpha = d.life / d.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#ffdd44';
+        ctx.font = `bold ${d.size}px "Microsoft YaHei", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ff8800';
+        ctx.shadowBlur = 8;
+        ctx.fillText(d.text, d.x, d.y);
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    // ---- 关卡过渡提示 ----
+    if (stageTransTimer > 0) {
+        stageTransTimer--;
+        const alpha = Math.min(1, stageTransTimer / 30);
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(0, H/2 - 50, W, 100);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 42px "Microsoft YaHei", sans-serif';
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 30;
+        ctx.fillText(stageTransText, W/2, H/2);
+        ctx.restore();
+    }
+
+    // ---- HUD ----
+    drawHUD(ctx);
+}
+
+// 绘制月牙刀气
+function drawSlashShape(ctx, x, y, size, rot, alpha, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.globalAlpha = alpha;
+
+    // 外发光
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 25;
+
+    // 月牙形
+    const r = size;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, -0.5, 0.5);
+    ctx.arc(0, 0, r * 0.45, 0.5, -0.5, true);
+    ctx.closePath();
+
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, color);
+    grad.addColorStop(0.7, 'rgba(0,180,255,0.6)');
+    grad.addColorStop(1, 'rgba(0,100,200,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 内发光线条
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+// 绘制敌人（武侠人物风格）
+function drawEnemy(ctx, e) {
+    const st = e.eType ? e.eType.stage : 1;
+    if (st === 1) drawEnemyWuxia(ctx, e);
+    else if (st === 2) drawEnemyAlien(ctx, e);
+    else drawEnemySpace(ctx, e);
+}
+
+// 武侠敌人
+function drawEnemyWuxia(ctx, e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const r = e.radius, t = e.eType, fl = e.hitFlash > 0;
+
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = fl ? 20 : 10;
+    const bg = ctx.createRadialGradient(-r*0.2, -r*0.2, 0, 0, 0, r);
+    if (fl) { bg.addColorStop(0, '#ff8866'); bg.addColorStop(0.6, '#ff5544'); }
+    else { bg.addColorStop(0, t.body); bg.addColorStop(0.7, t.dark); }
+    bg.addColorStop(1, '#1a0a0a');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = fl ? '#ffaa66' : t.dark;
+    ctx.fillRect(-r*0.6, r*0.2, r*1.2, r*0.12);
+
+    ctx.fillStyle = fl ? '#ccaa88' : t.hat;
+    ctx.beginPath(); ctx.ellipse(0, -r*0.85, r*0.75, r*0.18, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-r*0.15, -r*0.85); ctx.quadraticCurveTo(0, -r*1.25, r*0.15, -r*0.85); ctx.fill();
+
+    const eo = r*0.25;
+    ctx.fillStyle = '#ffeedd';
+    ctx.beginPath(); ctx.arc(-eo, -r*0.2, r*0.14, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(eo, -r*0.2, r*0.14, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a0000';
+    ctx.beginPath(); ctx.arc(-eo+r*0.04, -r*0.18, r*0.07, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(eo-r*0.04, -r*0.18, r*0.07, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = fl ? '#664433' : '#221100';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-eo-r*0.08, -r*0.38); ctx.lineTo(-eo+r*0.08, -r*0.28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(eo+r*0.08, -r*0.38); ctx.lineTo(eo-r*0.08, -r*0.28); ctx.stroke();
+
+    ctx.strokeStyle = fl ? '#fff' : t.weapon;
+    ctx.lineWidth = 2; ctx.shadowColor = 'rgba(200,200,200,0.2)'; ctx.shadowBlur = 4;
+    ctx.beginPath(); ctx.moveTo(r*0.55, r*0.1); ctx.lineTo(r*1.05, -r*0.6); ctx.stroke();
+    ctx.strokeStyle = '#553322'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(r*0.55, r*0.1); ctx.lineTo(r*0.5, r*0.25); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    if (e.hp < e.maxHp) {
+        const bw=r*1.8, bh=3, by=-r-12;
+        ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(-bw/2, by, bw, bh);
+        ctx.fillStyle='#44ff44'; ctx.fillRect(-bw/2, by, bw*(e.hp/e.maxHp), bh);
+    }
+    ctx.restore();
+}
+
+// 外星敌人
+function drawEnemyAlien(ctx, e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const r = e.radius, t = e.eType, fl = e.hitFlash > 0;
+    const bodyCol = fl ? '#ff8866' : t.body;
+    const darkCol = fl ? '#ff5544' : t.dark;
+
+    // 身体
+    ctx.shadowColor = t.eye; ctx.shadowBlur = fl ? 20 : 8;
+    const bg = ctx.createRadialGradient(-r*0.2, -r*0.2, 0, 0, 0, r);
+    bg.addColorStop(0, fl ? '#ffaa88' : t.skin);
+    bg.addColorStop(0.6, bodyCol);
+    bg.addColorStop(1, darkCol);
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 天线/触手（头顶）
+    ctx.strokeStyle = darkCol; ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i+=2) {
+        ctx.beginPath();
+        ctx.moveTo(i * r*0.2, -r*0.6);
+        ctx.quadraticCurveTo(i * r*0.5, -r*1.2, i * r*0.35, -r*1.4);
+        ctx.stroke();
+        // 触手末端球
+        ctx.fillStyle = t.eye;
+        ctx.beginPath(); ctx.arc(i * r*0.35, -r*1.4, r*0.08, 0, Math.PI*2); ctx.fill();
+    }
+
+    // 大眼睛（外星人特征）
+    const eyeR = r * 0.28;
+    ctx.fillStyle = '#ffffcc';
+    ctx.beginPath(); ctx.arc(-r*0.2, -r*0.1, eyeR, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.2, -r*0.1, eyeR, 0, Math.PI*2); ctx.fill();
+    // 瞳孔
+    ctx.fillStyle = '#1a0000';
+    ctx.beginPath(); ctx.arc(-r*0.15, -r*0.05, eyeR*0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.25, -r*0.05, eyeR*0.5, 0, Math.PI*2); ctx.fill();
+    // 瞳孔高光
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(-r*0.12, -r*0.1, eyeR*0.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.28, -r*0.1, eyeR*0.2, 0, Math.PI*2); ctx.fill();
+
+    // 嘴（锯齿）
+    ctx.strokeStyle = darkCol; ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * r*0.15, r*0.25);
+        ctx.lineTo(i * r*0.15 + r*0.05, r*0.35);
+        ctx.lineTo(i * r*0.15 + r*0.1, r*0.25);
+        ctx.stroke();
+    }
+
+    if (e.hp < e.maxHp) {
+        const bw=r*1.8, bh=3, by=-r-14;
+        ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(-bw/2, by, bw, bh);
+        ctx.fillStyle='#44ff44'; ctx.fillRect(-bw/2, by, bw*(e.hp/e.maxHp), bh);
+    }
+    ctx.restore();
+}
+
+// 宇宙敌人（能量体/飞船）
+function drawEnemySpace(ctx, e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const r = e.radius, t = e.eType, fl = e.hitFlash > 0;
+    const glow = fl ? '#ffffff' : t.glow;
+    const bodyCol = fl ? '#ffaa88' : t.body;
+    const darkCol = fl ? '#ff6644' : t.dark;
+
+    // 外层光晕
+    ctx.shadowColor = glow; ctx.shadowBlur = 25;
+    ctx.fillStyle = glow + '22';
+    ctx.beginPath(); ctx.arc(0, 0, r*1.5, 0, Math.PI*2); ctx.fill();
+
+    // 主体
+    ctx.shadowBlur = 18;
+    const bg = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    bg.addColorStop(0, t.core);
+    bg.addColorStop(0.4, bodyCol);
+    bg.addColorStop(1, darkCol);
+    ctx.fillStyle = bg;
+    // 飞船形状（六边形近似）
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2 - Math.PI/2;
+        const rr = i % 2 === 0 ? r : r * 0.7;
+        const px = Math.cos(a) * rr;
+        const py = Math.sin(a) * rr;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+
+    // 中心核心
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = t.core;
+    ctx.beginPath(); ctx.arc(0, 0, r*0.25, 0, Math.PI*2); ctx.fill();
+
+    // 能量环
+    ctx.strokeStyle = glow; ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.5 + Math.sin(gameTime*0.005 + e.x) * 0.2;
+    ctx.beginPath(); ctx.arc(0, 0, r*0.6, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    if (e.hp < e.maxHp) {
+        const bw=r*1.8, bh=3, by=-r-16;
+        ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(-bw/2, by, bw, bh);
+        ctx.fillStyle='#44ff44'; ctx.fillRect(-bw/2, by, bw*(e.hp/e.maxHp), bh);
+    }
+    ctx.restore();
+}
+
+// 绘制玩家（武侠剑客）
+function drawPlayer(ctx, p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    const s = CFG.playerSize;
+
+    // ===== 脚下光环 =====
+    ctx.shadowBlur = 0;
+    const halo = ctx.createRadialGradient(0, s*0.3, 0, 0, s*0.3, s*2.2);
+    halo.addColorStop(0, 'rgba(180,40,40,0.12)');
+    halo.addColorStop(0.5, 'rgba(140,20,20,0.05)');
+    halo.addColorStop(1, 'rgba(100,10,10,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, s*0.3, s*2.2, 0, Math.PI*2);
+    ctx.fill();
+
+    // ===== 左臂（背在身后） =====
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.5, -s*0.1);
+    ctx.quadraticCurveTo(-s*0.7, s*0.15, -s*0.65, s*0.35);
+    ctx.stroke();
+
+    // ===== 身体（汉奸黑中山装） =====
+    ctx.shadowColor = '#222222';
+    ctx.shadowBlur = 4;
+
+    const robeGrad = ctx.createLinearGradient(0, -s*0.2, 0, s*0.9);
+    robeGrad.addColorStop(0, '#2a2a2a');
+    robeGrad.addColorStop(0.4, '#1f1f1f');
+    robeGrad.addColorStop(0.8, '#151515');
+    robeGrad.addColorStop(1, '#0a0a0a');
+    ctx.fillStyle = robeGrad;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.55, -s*0.15);
+    ctx.lineTo(s*0.55, -s*0.15);
+    ctx.lineTo(s*0.75, s*0.85);
+    ctx.lineTo(-s*0.75, s*0.85);
+    ctx.closePath();
+    ctx.fill();
+
+    // 中山装翻领
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#444444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.15, -s*0.15);
+    ctx.lineTo(-s*0.08, s*0.1);
+    ctx.lineTo(0, s*0.05);
+    ctx.lineTo(s*0.08, s*0.1);
+    ctx.lineTo(s*0.15, -s*0.15);
+    ctx.stroke();
+
+    // 纽扣
+    ctx.fillStyle = '#888888';
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(0, s*0.15 + i*s*0.18, s*0.025, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    // ===== 腰带（黑色皮带） =====
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(-s*0.58, s*0.15, s*1.16, s*0.1);
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(-s*0.04, s*0.15, s*0.08, s*0.1);
+
+    // ===== 右臂（持剑） =====
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s*0.5, -s*0.1);
+    ctx.lineTo(s*0.45, s*0.0);
+    ctx.stroke();
+
+    // ===== 剑（暗红长剑） =====
+    ctx.shadowColor = '#cc3333';
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = '#ff6666';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(s*0.45, s*0.0);
+    ctx.lineTo(s*1.3, -s*1.4);
+    ctx.stroke();
+
+    // 剑身内刃高光
+    ctx.shadowBlur = 4;
+    ctx.strokeStyle = 'rgba(255,100,100,0.5)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(s*0.45, s*0.0);
+    ctx.lineTo(s*1.3, -s*1.4);
+    ctx.stroke();
+
+    // 剑格（护手）
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#996633';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(s*0.39, s*0.05);
+    ctx.lineTo(s*0.58, s*0.1);
+    ctx.stroke();
+
+    // 剑柄
+    ctx.strokeStyle = '#553322';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(s*0.45, s*0.0);
+    ctx.lineTo(s*0.4, s*0.12);
+    ctx.stroke();
+
+    // 剑穗
+    ctx.strokeStyle = '#cc3333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(s*0.4, s*0.12);
+    ctx.quadraticCurveTo(s*0.3, s*0.25, s*0.35, s*0.38);
+    ctx.stroke();
+
+    // ===== 头部 =====
+    ctx.shadowColor = '#cc3333';
+    ctx.shadowBlur = 4;
+
+    // 脖子
+    ctx.fillStyle = '#eecbaa';
+    ctx.fillRect(-s*0.12, -s*0.5, s*0.24, s*0.18);
+
+    // 头部
+    ctx.fillStyle = '#f5d6b8';
+    ctx.beginPath();
+    ctx.arc(0, -s*0.55, s*0.35, 0, Math.PI*2);
+    ctx.fill();
+
+    // ===== 头发 · 汉奸中分头 =====
+    ctx.shadowBlur = 0;
+
+    // 头顶头发（中分，油亮）
+    const hairGrad = ctx.createLinearGradient(-s*0.35, -s*0.9, s*0.35, -s*0.5);
+    hairGrad.addColorStop(0, '#0a0a0a');
+    hairGrad.addColorStop(0.5, '#1a1a1a');
+    hairGrad.addColorStop(1, '#0a0a0a');
+    ctx.fillStyle = hairGrad;
+
+    // 整体头发轮廓（覆盖头顶，中分线）
+    ctx.beginPath();
+    ctx.moveTo(-s*0.36, -s*0.5);
+    ctx.quadraticCurveTo(-s*0.38, -s*0.75, -s*0.28, -s*0.88);
+    ctx.quadraticCurveTo(-s*0.15, -s*0.98, 0, -s*0.92);  // 中分顶点
+    ctx.quadraticCurveTo(s*0.15, -s*0.98, s*0.28, -s*0.88);
+    ctx.quadraticCurveTo(s*0.38, -s*0.75, s*0.36, -s*0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // 左边贴脸鬓角（汉奸标志）
+    ctx.fillStyle = '#111111';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.35, -s*0.55);
+    ctx.quadraticCurveTo(-s*0.38, -s*0.35, -s*0.32, -s*0.18);
+    ctx.lineTo(-s*0.28, -s*0.18);
+    ctx.quadraticCurveTo(-s*0.33, -s*0.35, -s*0.3, -s*0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // 右边贴脸鬓角
+    ctx.beginPath();
+    ctx.moveTo(s*0.35, -s*0.55);
+    ctx.quadraticCurveTo(s*0.38, -s*0.35, s*0.32, -s*0.18);
+    ctx.lineTo(s*0.28, -s*0.18);
+    ctx.quadraticCurveTo(s*0.33, -s*0.35, s*0.3, -s*0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // 中分线（白色细线）
+    ctx.strokeStyle = 'rgba(200,200,200,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -s*0.92);
+    ctx.lineTo(0, -s*0.6);
+    ctx.stroke();
+
+    // 油头高光
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.ellipse(-s*0.12, -s*0.78, s*0.12, s*0.06, -0.2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(s*0.12, -s*0.78, s*0.12, s*0.06, 0.2, 0, Math.PI*2);
+    ctx.fill();
+
+    // ===== 面部（汉奸表情） =====
+    // 眉毛（八字眉，阴险）
+    ctx.strokeStyle = '#332222';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.2, -s*0.63);
+    ctx.quadraticCurveTo(-s*0.12, -s*0.58, -s*0.03, -s*0.6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(s*0.2, -s*0.63);
+    ctx.quadraticCurveTo(s*0.12, -s*0.58, s*0.03, -s*0.6);
+    ctx.stroke();
+
+    // 眼睛（眯眯眼，阴险）
+    ctx.strokeStyle = '#221111';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.18, -s*0.54);
+    ctx.lineTo(-s*0.05, -s*0.54);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(s*0.18, -s*0.54);
+    ctx.lineTo(s*0.05, -s*0.54);
+    ctx.stroke();
+
+    // 歪嘴笑
+    ctx.strokeStyle = '#553333';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.1, -s*0.42);
+    ctx.quadraticCurveTo(s*0.05, -s*0.36, s*0.12, -s*0.4);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+// 根据关卡选择背景
+function drawStageBg(ctx, stage) {
+    if (stage === 1) drawStage1Bg(ctx);
+    else if (stage === 2) drawStage2Bg(ctx);
+    else drawStage3Bg(ctx);
+}
+
+// 第1关 · 江湖（水墨武侠）
+function drawStage1Bg(ctx) {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#2d2820');
+    grad.addColorStop(0.3, '#221e18');
+    grad.addColorStop(0.6, '#181510');
+    grad.addColorStop(1, '#0d0b08');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(55,48,38,0.13)';
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.50);
+    ctx.quadraticCurveTo(W * 0.10, H * 0.32, W * 0.20, H * 0.48);
+    ctx.quadraticCurveTo(W * 0.30, H * 0.35, W * 0.42, H * 0.45);
+    ctx.quadraticCurveTo(W * 0.52, H * 0.30, W * 0.62, H * 0.42);
+    ctx.quadraticCurveTo(W * 0.74, H * 0.33, W * 0.85, H * 0.44);
+    ctx.quadraticCurveTo(W * 0.95, H * 0.36, W, H * 0.46);
+    ctx.lineTo(W, H * 0.6); ctx.lineTo(0, H * 0.6);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = 'rgba(48,42,35,0.18)';
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.58);
+    ctx.quadraticCurveTo(W * 0.12, H * 0.42, W * 0.24, H * 0.55);
+    ctx.quadraticCurveTo(W * 0.36, H * 0.44, W * 0.48, H * 0.52);
+    ctx.quadraticCurveTo(W * 0.58, H * 0.40, W * 0.70, H * 0.50);
+    ctx.quadraticCurveTo(W * 0.82, H * 0.42, W * 0.92, H * 0.50);
+    ctx.lineTo(W, H * 0.50); ctx.lineTo(W, H * 0.66);
+    ctx.lineTo(0, H * 0.66);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = 'rgba(30,25,20,0.5)';
+    ctx.fillRect(0, H * 0.84, W, H * 0.16);
+    ctx.strokeStyle = 'rgba(50,42,35,0.2)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 10; i++) {
+        const y = H * 0.85 + (i % 3) * 14 + 6;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    for (let i = 0; i < 12; i++) {
+        const lx = (i * 173.7 + 37) % W;
+        const ly = (i * 89.3 + 53) % H * 0.7 + H * 0.05;
+        ctx.save(); ctx.translate(lx, ly); ctx.rotate(i * 0.8);
+        ctx.fillStyle = `rgba(60,85,45,${0.08 + (i % 4) * 0.03})`;
+        ctx.beginPath(); ctx.ellipse(0, 0, (2 + (i % 3)) * 2.5, (2 + (i % 3)) * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.restore();
+    }
+}
+
+// 第2关 · 外星（星球表面）
+function drawStage2Bg(ctx) {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#1a0a05');
+    grad.addColorStop(0.3, '#2a1508');
+    grad.addColorStop(0.7, '#3a1a0a');
+    grad.addColorStop(1, '#1a0a05');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.shadowBlur = 0;
+    // 外星月亮
+    ctx.fillStyle = 'rgba(200,100,50,0.08)';
+    ctx.beginPath(); ctx.arc(W * 0.8, H * 0.12, 50, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(200,100,50,0.05)';
+    ctx.beginPath(); ctx.arc(W * 0.8, H * 0.12, 70, 0, Math.PI * 2); ctx.fill();
+
+    // 远山（异星轮廓）
+    ctx.fillStyle = 'rgba(60,30,15,0.2)';
+    ctx.beginPath(); ctx.moveTo(0, H * 0.6);
+    ctx.quadraticCurveTo(W * 0.2, H * 0.45, W * 0.4, H * 0.55);
+    ctx.quadraticCurveTo(W * 0.6, H * 0.42, W * 0.8, H * 0.52);
+    ctx.quadraticCurveTo(W * 0.9, H * 0.48, W, H * 0.55);
+    ctx.lineTo(W, H * 0.7); ctx.lineTo(0, H * 0.7);
+    ctx.closePath(); ctx.fill();
+
+    // 岩石地面
+    ctx.fillStyle = 'rgba(80,40,20,0.4)';
+    ctx.fillRect(0, H * 0.78, W, H * 0.22);
+    ctx.fillStyle = 'rgba(100,50,25,0.15)';
+    for (let i = 0; i < 25; i++) {
+        const rx = (i * 67 + 23) % W;
+        const ry = H * 0.78 + (i * 13 + 7) % (H * 0.18);
+        ctx.beginPath(); ctx.arc(rx, ry, 2 + (i % 5), 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // 暗淡星星
+    ctx.fillStyle = 'rgba(255,255,200,0.12)';
+    for (let i = 0; i < 25; i++) {
+        const sx = (i * 137.5 + 50) % W;
+        const sy = (i * 97.3 + 30) % (H * 0.65);
+        ctx.beginPath(); ctx.arc(sx, sy, 0.5 + (i % 3) * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// 第3关 · 宇宙（太空）
+function drawStage3Bg(ctx) {
+    ctx.fillStyle = '#000005';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.shadowBlur = 0;
+    // 星云
+    const n1 = ctx.createRadialGradient(W * 0.3, H * 0.25, 0, W * 0.3, H * 0.25, 220);
+    n1.addColorStop(0, 'rgba(100,0,150,0.06)');
+    n1.addColorStop(0.5, 'rgba(50,0,100,0.03)');
+    n1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = n1; ctx.fillRect(0, 0, W, H);
+
+    const n2 = ctx.createRadialGradient(W * 0.7, H * 0.65, 0, W * 0.7, H * 0.65, 280);
+    n2.addColorStop(0, 'rgba(0,80,180,0.05)');
+    n2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = n2; ctx.fillRect(0, 0, W, H);
+
+    // 闪烁星星
+    for (let i = 0; i < 120; i++) {
+        const sx = (i * 137.5 + 50) % W;
+        const sy = (i * 97.3 + 30) % H;
+        const flicker = 0.5 + Math.sin(gameTime * 0.003 + i * 0.7) * 0.3;
+        ctx.globalAlpha = flicker * 0.7;
+        ctx.fillStyle = `rgba(255,255,255,${0.3 + (i % 7) * 0.1})`;
+        ctx.beginPath(); ctx.arc(sx, sy, 0.5 + (i % 4) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 远星系
+    ctx.fillStyle = 'rgba(150,200,255,0.05)';
+    ctx.beginPath(); ctx.arc(W * 0.12, H * 0.1, 35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(150,200,255,0.03)';
+    ctx.beginPath(); ctx.arc(W * 0.12, H * 0.1, 55, 0, Math.PI * 2); ctx.fill();
+}
+
+// 绘制HUD
+function drawHUD(ctx) {
+    ctx.save();
+
+    // 左上角：击杀数、等级
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 10;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(10, 10, 210, 100, 10);
+        ctx.fill();
+    } else {
+        ctx.fillRect(10, 10, 210, 100);
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 22px "Microsoft YaHei", sans-serif';
+    const stageNames = ['', '第一关·江湖', '第二关·外星', '第三关·宇宙'];
+    ctx.fillText(`${stageNames[currentStage] || '未知'}  等级 ${level}`, 22, 38);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px "Microsoft YaHei", sans-serif';
+    const lvText = level >= MAX_LEVEL ? '已满级' : `升级(${levelKills}/${getKillsToLevelUp()})`;
+    ctx.fillText(`击杀 ${kills}  ${lvText}  通关(${stageKills}/${STAGE_KILLS_NEED})`, 22, 65);
+
+    ctx.fillStyle = '#88ddff';
+    ctx.font = '14px "Microsoft YaHei", sans-serif';
+    ctx.fillText(`刀气: 尺寸${Math.round(curSize)}  伤害${curDamage}  数量${curCount}  冷却${curCooldown}ms`, 22, 90);
+
+    // 底部操作提示
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '13px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('鼠标移动 · 刀气自动索敌 · 左键补射 · A键大招', W / 2, H - 18);
+
+    ctx.restore();
+}
+
+// ============================================================
+//  ██████  游戏主循环
+// ============================================================
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  ██████  启动
+// ============================================================
+restartGame();
+gameLoop();
+</script>
+</body>
+</html>
